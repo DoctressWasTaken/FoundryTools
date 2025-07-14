@@ -1,0 +1,26 @@
+[project]
+name = "tta-formatter"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Robin (Doctress)",email = "robinholzwarth95@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas (>=2.3.1,<3.0.0)",
+    "requests (>=2.32.4,<3.0.0)",
+    "python-dotenv (>=1.1.1,<2.0.0)"
+]
+
+[tool.poetry]
+
+[[tool.poetry.packages]]
+include = "app"
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
