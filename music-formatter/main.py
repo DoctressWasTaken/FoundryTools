@@ -76,19 +76,19 @@ for idx in range(3, len(df)):
     })
 
 # === EXPORT TO GIST ===
-GIST_ID = os.environ.get("GIST_SONG_MAPPING")
-GH_TOKEN = os.environ.get("GIST_GH_TOKEN")
-if not GIST_ID or not GH_TOKEN:
-    raise Exception("GIST_ID and GH_TOKEN must be set")
+GIST_SONG_MAPPING = os.environ.get("GIST_SONG_MAPPING")
+GIST_GH_TOKEN = os.environ.get("GIST_GH_TOKEN")
+if not GIST_SONG_MAPPING or not GIST_GH_TOKEN:
+    raise Exception("GIST_SONG_MAPPING and GIST_GH_TOKEN must be set")
 
 filename = "song-mapping.json"
 
 new_content = json.dumps(songs, indent=2)
 
 response = requests.patch(
-    f"https://api.github.com/gists/{GIST_ID}",
+    f"https://api.github.com/gists/{GIST_SONG_MAPPING}",
     headers={
-        "Authorization": f"token {GH_TOKEN}",
+        "Authorization": f"token {GIST_GH_TOKEN}",
         "Accept": "application/vnd.github.v3+json",
     },
     json={

@@ -26,5 +26,5 @@ jobs:
 
       - name: Run script
         env:
-          GH_TOKEN: ${{ secrets.GIST_GH_TOKEN }}
+          GIST_GH_TOKEN: ${{ secrets.GIST_GH_TOKEN }}
         run: poetry run python music-formatter/main.py
