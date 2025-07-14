@@ -16,7 +16,7 @@ dependencies = [
 [tool.poetry]
 
 [[tool.poetry.packages]]
-include = "app"
+include = "music-formatter"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"

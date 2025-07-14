@@ -1,25 +1,25 @@
 import os
+import json
 
 import pandas as pd
+import numpy as np
 import requests
 import io
+from dotenv import load_dotenv
+
+load_dotenv('secrets.env')
 
 # === CONFIG ===
 SHEET_ID = os.environ.get('SHEET_ID')
-TAB_NAME = os.environ.get('TAB_NAME')
-if not SHEET_ID or not TAB_NAME:
-    raise Exception("SHEET_ID and TAB_NAME must be set")
-
+SHEET_GID = os.environ.get('SHEET_GID')
+if not SHEET_ID or not SHEET_GID:
+    raise Exception("SHEET_ID and SHEET_GID must be set")
 
 # === DOWNLOAD CSV ===
-url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={TAB_NAME}"
-response = requests.get(url)
-response.raise_for_status()
-csv_data = response.content.decode("utf-8")
+url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={SHEET_GID}"
 
 # === LOAD INTO DATAFRAME ===
-df = pd.read_csv(io.StringIO(csv_data), header=None)
-
+df = pd.read_csv(url, header=None)
 # === PARSE CATEGORY HEADERS ===
 category_row = df.iloc[1]  # second row
 subcategory_row = df.iloc[2]  # third row
@@ -47,21 +47,28 @@ for idx in range(3, len(df)):
     track_number = int(row[2]) if pd.notna(row[2]) else None
     name = str(row[3]).strip()
 
+
     cat_ratings = []
     for col in range(4, len(row)):
-        cell = str(row[col]).strip()
-        if cell:
-            try:
-                val = int(cell)
-            except ValueError:
-                continue
-            cat, sub = categories[col]
-            cat_ratings.append({
-                "cat": cat,
-                "sub": sub,
-                "rating": val
-            })
-
+        cell = row[col]
+        is_fav = False
+        if str(cell).strip().lower() == 'x':
+            is_fav = True
+        elif pd.isna(cell):
+            continue
+        cat, sub = categories[col]
+        if sub == 'nan':
+            sub = None
+        try:
+            rating = int(cell)
+        except ValueError:
+            rating = 0
+        cat_ratings.append({
+            "cat": cat,
+            "sub": sub,
+            "rating": rating,
+            "favorite": is_fav
+        })
     songs.append({
         "name": name,
         "track_number": track_number,
@@ -73,17 +80,17 @@ for idx in range(3, len(df)):
 
 GIST_ID = os.environ.get("GIST_SONG_MAPPING")
 GH_TOKEN = os.environ.get("GIST_GH_TOKEN")
-if not gist_id or not token:
+if not GIST_ID or not GH_TOKEN:
     raise Exception("GIST_ID and GH_TOKEN must be set")
 
-filename = "update.json"
+filename = "song-mapping.json"
 
 new_content = json.dumps(songs, indent=2)
 
 response = requests.patch(
-    f"https://api.github.com/gists/{gist_id}",
+    f"https://api.github.com/gists/{GIST_ID}",
     headers={
-        "Authorization": f"token {token}",
+        "Authorization": f"token {GH_TOKEN}",
         "Accept": "application/vnd.github.v3+json",
     },
     json={
