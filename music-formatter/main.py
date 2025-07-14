@@ -70,4 +70,28 @@ for idx in range(3, len(df)):
     })
 
 # === RESULT ===
-print(songs)
+
+GIST_ID = os.environ.get("GIST_SONG_MAPPING")
+GH_TOKEN = os.environ.get("GIST_GH_TOKEN")
+if not gist_id or not token:
+    raise Exception("GIST_ID and GH_TOKEN must be set")
+
+filename = "update.json"
+
+new_content = json.dumps(songs, indent=2)
+
+response = requests.patch(
+    f"https://api.github.com/gists/{gist_id}",
+    headers={
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json",
+    },
+    json={
+        "files": {
+            filename: {"content": new_content}
+        }
+    }
+)
+
+response.raise_for_status()
+print("Gist updated.")
