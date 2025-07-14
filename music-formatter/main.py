@@ -7,6 +7,7 @@ import requests
 import io
 from dotenv import load_dotenv
 
+load_dotenv()
 load_dotenv('secrets.env')
 
 # === CONFIG ===
@@ -15,16 +16,15 @@ SHEET_GID = os.environ.get('SHEET_GID')
 if not SHEET_ID or not SHEET_GID:
     raise Exception("SHEET_ID and SHEET_GID must be set")
 
-# === DOWNLOAD CSV ===
+# === DOWNLOAD INTO DATAFRAME ===
 url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={SHEET_GID}"
-
-# === LOAD INTO DATAFRAME ===
 df = pd.read_csv(url, header=None)
+
 # === PARSE CATEGORY HEADERS ===
 category_row = df.iloc[1]  # second row
 subcategory_row = df.iloc[2]  # third row
 
-# propagate main categories to the right
+# === PROPAGATE CATEGORIES ===
 current_cat = ""
 categories = []
 for i in range(len(category_row)):
@@ -46,7 +46,6 @@ for idx in range(3, len(df)):
     favorite = str(row[1]).strip().lower() == "x"
     track_number = int(row[2]) if pd.notna(row[2]) else None
     name = str(row[3]).strip()
-
 
     cat_ratings = []
     for col in range(4, len(row)):
@@ -76,8 +75,7 @@ for idx in range(3, len(df)):
         "categories": cat_ratings
     })
 
-# === RESULT ===
-
+# === EXPORT TO GIST ===
 GIST_ID = os.environ.get("GIST_SONG_MAPPING")
 GH_TOKEN = os.environ.get("GIST_GH_TOKEN")
 if not GIST_ID or not GH_TOKEN:
