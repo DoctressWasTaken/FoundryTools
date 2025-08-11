@@ -34,7 +34,7 @@ const rowsHtml = tiles.map(t => {
   const alphaPct = Math.round(alpha * 100);
   const preview = makePreview(src, muted, name);
   return `
-    <div class="tile-row" data-id="${t.id}">
+    <div class="tile-row" data-id="${t.id}" data-name="${name.toLowerCase()}" data-tags="${tags.join(" ").toLowerCase()}">
       <div class="left">
         ${preview}
       </div>
@@ -147,8 +147,14 @@ const css = `
 `;
 
 const content = `
-<div id="tile-list-root">
-  ${rowsHtml}
+<div id="tile-panel">
+  <div id="tile-header">
+    <input id="tile-filter" type="text" placeholder="Filter by name or tag…" />
+    <span id="tile-count">${tiles.length} tiles</span>
+  </div>
+  <div id="tile-list-root">
+    ${rowsHtml}
+  </div>
 </div>
 `;
 
@@ -166,6 +172,10 @@ await foundry.applications.api.DialogV2.wait({
     }
     const root = dialog.element.querySelector("#tile-list-root");
     if (!root) return;
+    const filterInput = dialog.element.querySelector("#tile-filter");
+    const countEl = dialog.element.querySelector("#tile-count");
+
+
     root.addEventListener("change", async (ev) => {
       const input = ev.target;
       if (!(input instanceof HTMLInputElement) || !input.classList.contains("vis-toggle")) return;
@@ -208,22 +218,41 @@ await foundry.applications.api.DialogV2.wait({
 
     // Select the tile
     root.addEventListener("click", (ev) => {
-  const btn = ev.target;
-  if (!(btn instanceof HTMLButtonElement) || !btn.classList.contains("select")) return;
+      const btn = ev.target;
+      if (!(btn instanceof HTMLButtonElement) || !btn.classList.contains("select")) return;
 
-  ev.preventDefault();
-  const row = btn.closest(".tile-row");
-  const id = row?.dataset.id;
-  const tile = id && canvas.tiles.placeables.find(t => t.id === id);
-  if (!tile) return;
+      ev.preventDefault();
+      const row = btn.closest(".tile-row");
+      const id = row?.dataset.id;
+      const tile = id && canvas.tiles.placeables.find(t => t.id === id);
+      if (!tile) return;
 
-  // Make sure Tiles layer is active, then select the tile
-  canvas.tiles.activate();
-  tile.control({ releaseOthers: true });
+      // Make sure Tiles layer is active, then select the tile
+      canvas.tiles.activate();
+      tile.control({ releaseOthers: true });
 
-  // Optional: quick pan to center the selected tile
-  const c = tile.center ?? { x: tile.document.x + tile.document.width / 2, y: tile.document.y + tile.document.height / 2 };
-  canvas.animatePan({ x: c.x, y: c.y, duration: 250 });
-});
+      // Optional: quick pan to center the selected tile
+      const c = tile.center ?? { x: tile.document.x + tile.document.width / 2, y: tile.document.y + tile.document.height / 2 };
+      canvas.animatePan({ x: c.x, y: c.y, duration: 250 });
+    });
+
+        // filter (debounced)
+    let t;
+    const applyFilter = () => {
+      const q = filterInput.value.trim().toLowerCase();
+      let visibleCount = 0;
+      for (const row of root.querySelectorAll(".tile-row")) {
+        const name = row.getAttribute("data-name") || "";
+        const tags = row.getAttribute("data-tags") || "";
+        const show = !q || name.includes(q) || tags.includes(q);
+        row.style.display = show ? "" : "none";
+        if (show) visibleCount++;
+      }
+      if (countEl) countEl.textContent = `${visibleCount} / ${tiles.length} tiles`;
+    };
+    filterInput.addEventListener("input", () => {
+      clearTimeout(t); t = setTimeout(applyFilter, 120);
+    });
+    applyFilter(); // initial
   }
 });
