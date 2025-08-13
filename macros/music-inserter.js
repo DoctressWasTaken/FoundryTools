@@ -67,9 +67,10 @@ function extractCleanName(path) {
     return clean.trim();
 }
 
-
+// Main function
 (async () => {
     const result = await new Promise((resolve) => {
+        // Initial dialog to define parent folder name
         new Dialog({
             title: "Playlist Folder Name",
             content: `
@@ -94,7 +95,6 @@ function extractCleanName(path) {
     });
     if (result !== null) {
         playlistFolderName = result;
-        console.log("Generating playlist.")
         // === Load JSON from gist ===
         const mapping = await loadJson(gist_url);
 
@@ -110,7 +110,6 @@ function extractCleanName(path) {
                         items: [],
                         files: [],
                         subcategories: {},
-                        folder: null
                     }
                 }
                 if (cat_data.sub) {
@@ -118,7 +117,6 @@ function extractCleanName(path) {
                         categorySet[cat_data.cat].subcategories[cat_data.sub] = {
                             items: [],
                             files: [],
-                            folder: null
                         }
                     }
                     categorySet[cat_data.cat].subcategories[cat_data.sub].items.push(item);
@@ -143,9 +141,8 @@ function extractCleanName(path) {
 
             }
         }
-        console.log(categorySet);
-
         const confirm = await new Promise((resolve) => {
+            // Confirmation dialog showing the to-be created tree structure
             new Dialog({
                 title: "Success",
                 content: `
@@ -168,42 +165,40 @@ function extractCleanName(path) {
         });
 
         if (confirm !== null) {
+            const parentApi = game.modules.get("folder-api")?.api;
             // === Create Main Playlist Folder ===
             let mainFolder = game.folders.find(f => f.name === playlistFolderName && f.type === "Playlist");
             if (!mainFolder) mainFolder = await Folder.create({name: playlistFolderName, type: "Playlist"});
-            console.log(mainFolder);
-            console.log(mainFolder.id);
             for (let [category, meta] of Object.entries(categorySet)) {
-                // Creates the category folder
+                console.log(category, meta);
+                console.log(game.folders);
                 let categoryFolder = game.folders.find(f => f.name === category && f.type === "Playlist" && f.parent === mainFolder.id);
-                if (!categoryFolder) categoryFolder = await Folder.create({
-                    name: category,
-                    type: "Playlist",
-                    parent: mainFolder
-                });
-                categorySet[category].folder = categoryFolder;
-                for (const [subcategory, sub_meta] of Object.entries(meta.subcategories)) {
-                    let subcategoryFolder = game.folders.find(f => f.name === category && f.type === "Playlist" && f.parent === categoryFolder.id);
-                    if (!subcategoryFolder) subcategoryFolder = await Folder.create({
-                        name: subcategory,
+                // Creates the category folder
+                if (!categoryFolder) {
+                    categoryFolder = await Folder.create({
+                        name: category,
                         type: "Playlist",
-                        parent: categoryFolder.id
                     });
-                    categorySet[category][subcategory].folder = subcategoryFolder;
+                    await parentApi.setParent(categoryFolder.id, mainFolder.id)
                 }
-            }
-            return
-            // === Add playlists to folder ===
-            for (let [name, files] of Object.entries(playlistEntries)) {
-                if (files.length == 0) {
-                    console.log(`Found no files for ${name}. Skipping creation.`);
-                } else {
-                    const playlist = await ensurePlaylist(mainFolder.id, name);
+                if (meta.files.length > 0) {
+                    // Self playlist
+                    const playlist = await ensurePlaylist(categoryFolder.id, 'self');
                     await playlist.createEmbeddedDocuments("PlaylistSound",
-                        files.map(file => ({...file, volume: 0.8, repeat: false}))
+                        meta.files.map(file => ({...file, volume: 0.8, repeat: false}))
+                    );
+                }
+
+                for (const [subcategory, sub_meta] of Object.entries(meta.subcategories)) {
+                    console.log(subcategory, sub_meta);
+                    if (sub_meta.files.length === 0) continue;
+                   const playlist = await ensurePlaylist(categoryFolder.id, subcategory);
+                    await playlist.createEmbeddedDocuments("PlaylistSound",
+                        sub_meta.files.map(file => ({...file, volume: 0.8, repeat: false}))
                     );
                 }
             }
+            console.log("Created folders");
         }
         ui.notifications.info("Playlists populated successfully.");
     }
