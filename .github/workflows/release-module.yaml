@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*"
+      -
+permissions:
+  contents: write
 
 jobs:
   build-release:
@@ -30,9 +33,11 @@ jobs:
           # Put files at ZIP root (no extra parent folder!)
           zip -r "$GITHUB_WORKSPACE/${{ env.ZIP_NAME }}" .
 
-      - name: Attach ZIP to GitHub Release
+      - name: Create GitHub Release + upload asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
           files: ${{ github.workspace }}/${{ env.ZIP_NAME }}
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
