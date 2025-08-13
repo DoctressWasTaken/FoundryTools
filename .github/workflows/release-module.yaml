@@ -1,0 +1,38 @@
+name: Release Foundry Module (subdir)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    env:
+      MODULE_DIR: modules/folder-api   # <-- your subdirectory
+      ZIP_BASENAME: folder-api         # <-- your module zip base name (no version)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set version/tag env
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "ZIP_NAME=${{ env.ZIP_BASENAME }}-$TAG.zip" >> $GITHUB_ENV
+
+      - name: Sanity check module.json exists in subdir
+        run: test -f "$MODULE_DIR/module.json"
+
+      - name: Create flat ZIP from subdirectory
+        working-directory: ${{ env.MODULE_DIR }}
+        run: |
+          # Put files at ZIP root (no extra parent folder!)
+          zip -r "$GITHUB_WORKSPACE/${{ env.ZIP_NAME }}" .
+
+      - name: Attach ZIP to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          files: ${{ github.workspace }}/${{ env.ZIP_NAME }}
+          generate_release_notes: true
