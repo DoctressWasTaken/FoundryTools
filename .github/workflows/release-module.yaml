@@ -1,4 +1,4 @@
-name: Release Foundry Module (subdir)
+name: Release Foundry Module
 
 on:
   push:
