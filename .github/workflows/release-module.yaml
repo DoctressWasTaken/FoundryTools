@@ -6,32 +6,28 @@ on:
       - "v*"
 
 permissions:
-  contents: write
+  contents: read   # keep global token read-only
 
 jobs:
   build-release:
     runs-on: ubuntu-latest
     env:
-      MODULE_DIR: modules/folder-api   # <-- your subdirectory
-      ZIP_BASENAME: folder-api         # <-- your module zip base name (no version)
+      MODULE_DIR: modules/folder-api
+      ZIP_BASENAME: folder-api
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set version/tag env
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          echo "TAG=$TAG" >> $GITHUB_ENV
-          echo "ZIP_NAME=${{ env.ZIP_BASENAME }}-$TAG.zip" >> $GITHUB_ENV
+          echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "ZIP_NAME=${ZIP_BASENAME}-${GITHUB_REF#refs/tags/}.zip" >> $GITHUB_ENV
 
-      - name: Sanity check module.json exists in subdir
+      - name: Ensure module.json exists
         run: test -f "$MODULE_DIR/module.json"
 
       - name: Create flat ZIP from subdirectory
         working-directory: ${{ env.MODULE_DIR }}
-        run: |
-          # Put files at ZIP root (no extra parent folder!)
-          zip -r "$GITHUB_WORKSPACE/${{ env.ZIP_NAME }}" .
+        run: zip -r "$GITHUB_WORKSPACE/${{ env.ZIP_NAME }}" .
 
       - name: Create GitHub Release + upload asset
         uses: softprops/action-gh-release@v2
@@ -39,5 +35,4 @@ jobs:
           tag_name: ${{ env.TAG }}
           files: ${{ github.workspace }}/${{ env.ZIP_NAME }}
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN }}
